@@ -1,78 +1,57 @@
+#include <cassert>
+#include <print>
 #include <iostream>
 
-template <typename T>
-class DynamicArray {
-    public:
-        DynamicArray(size_t len) : m_len(len)
-        {
-           m_data = new T[len]; 
-        }
 
-        ~DynamicArray()
-        {
-            delete m_data;
-        }
-
-        T* ptr() { return m_data; }
-    private:
-        T* m_data;
-        size_t m_len;
-};
-
-
-int* createArray(size_t len) {
-    auto arr = new int[len]; 
-    return arr;
+/**
+ *
+ * @param len Lenth
+ * @return
+ */
+int* createArray(const size_t len)
+{
+    return new int[len];
 }
 
-int initializeArray(int* arr, size_t len) {
-    if (arr == nullptr) {
-        return -1;
-    }
+void initializeArray(int arr[], const size_t len)
+{
+    assert(arr != nullptr);
 
-    for (size_t i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i)
+    {
         arr[i] = i;
     }
-    return 0;
 }
 
-int printArray(int* arr, size_t len) {
-    if (arr == nullptr) {
-        return -1;
+void printArray(const int arr[], const size_t len)
+{
+    assert(arr != nullptr);
+
+    std::print("Array contents: ");
+    for (size_t i = 0; i < len; ++i)
+    {
+        std::print("{} ", arr[i]);
     }
-    for (size_t i = 0; i < len; ++i) {
-        std::cout << arr[i] << '\n'; 
-    }
-    return 0;
+    std::println();
 }
 
-void deleteArray(int* arr) {
-   delete[] arr; 
+void deleteArray(const int arr[])
+{
+    delete[] arr;
 }
 
 int main()
 {
     size_t len;
-    std::cout << "arr length: ";
+    std::print("arr length: ");
     std::cin >> len;
-    std::cout << '\n';
-    
-    int* arr = createArray(len);
-    if (arr == nullptr) {
-        std::cout << "arr is null failed to initialize\n";
-        return 1;
-    }
-    int res = initializeArray(arr, len);
-    if (res == -1) {
-        std::cout << "arr is null could not initialize\n";
-        return 1;
-    }
+    std::println();
 
-    res = printArray(arr, len);  
-    if (res == -1) {
-        std::cout << "arr is null could not initialize\n";
-        return 1;
-    }
+    int* arr = createArray(len);
+
+    initializeArray(arr, len);
+
+    printArray(arr, len);
 
     deleteArray(arr);
     return 0;
