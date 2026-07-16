@@ -27,7 +27,7 @@ public:
 
     ~Point() = default;
 
-    int translate(const int d, const char axis)
+    int translate(const float d, const char axis)
     {
         switch (axis)
         {
@@ -84,7 +84,7 @@ public:
     // ~Triangle() = default;
 
 
-    int translate(const int d, const char axis)
+    int translate(const float d, const char axis)
     {
         ensure_initialized();
 
@@ -111,16 +111,16 @@ public:
     [[nodiscard]] explicit operator std::string() const
     {
         return std::format(
-            "Triangle(\n\t{},\n\t{},\n\t{}\n1)",
+            "Triangle(\n\t{},\n\t{},\n\t{}\n)",
             m_vertex[0].transform([](const std::unique_ptr<Point>& x)
             {
                 return static_cast<std::string>(*x);
             }).value_or("nullptr"),
-            m_vertex[0].transform([](const std::unique_ptr<Point>& x)
+            m_vertex[1].transform([](const std::unique_ptr<Point>& x)
             {
                 return static_cast<std::string>(*x);
             }).value_or("nullptr"),
-            m_vertex[0].transform([](const std::unique_ptr<Point>& x)
+            m_vertex[2].transform([](const std::unique_ptr<Point>& x)
             {
                 return static_cast<std::string>(*x);
             }).value_or("nullptr")
@@ -145,9 +145,11 @@ public:
     {
         while (true)
         {
+            clear_screen();
             std::println("Triangle Manipulation Menu");
-            std::println("Triangles:");
+            std::println();
             print_triangles();
+            std::println();
             std::println("Commands:");
             std::println("[1] Create triangle");
             std::println("[2] Edit triangle");
@@ -156,8 +158,12 @@ public:
             std::println("[5] Display triangles");
             std::println();
             std::println("[0] Quit");
+            std::println();
+            const int option = prompt<int>("Select an option: ");
 
-            switch (const int option = prompt_int("Select an option: "))
+            clear_screen();
+
+            switch (option)
             {
             case 0:
                 return;
@@ -170,7 +176,6 @@ public:
                     if (!triangle_idx.has_value()) break;
 
                     run_edit_menu(m_triangles[triangle_idx.value()]);
-
                     break;
                 }
             case 3:
@@ -182,13 +187,37 @@ public:
                     break;
                 }
             case 4:
-                //TODO
-                break;
+                {
+                    const auto triangle_idx = select_triangle(true);
+                    if (!triangle_idx.has_value()) break;
+
+                    char direction;
+                    while (true)
+                    {
+                        direction = prompt<char>("Enter direction to translate in (x, y, or z): ");
+                        direction = static_cast<char>(tolower(direction));
+                        if (direction != 'x' && direction != 'y' && direction != 'z')
+                        {
+                            std::println("Invalid direction");
+                            continue;
+                        }
+
+                        break;
+                    }
+
+                    const auto d = prompt<float>("Enter value to translate by: ");
+
+                    m_triangles[triangle_idx.value()].translate(d, direction);
+
+                    break;
+                }
             case 5:
                 print_triangles();
+                pause();
                 break;
             default:
                 std::println("Invalid Option ({})!", option);
+                pause();
             }
         }
     }
@@ -196,30 +225,58 @@ public:
 private:
     std::vector<Triangle> m_triangles;
 
-    void print_triangles()
+    void print_triangles(const bool only_initialized = false)
     {
-        for (size_t idx = 0; auto& triangle : m_triangles)
+        std::println("Triangles:");
+        for (size_t idx = 1; auto& triangle : m_triangles)
         {
-            std::println("[{}] {}", idx, static_cast<std::string>(triangle));
+            if (!only_initialized || triangle.is_initialized())
+            {
+                std::println(
+                    "[{}] {} area = {}", idx,
+                    static_cast<std::string>(triangle),
+                    triangle.is_initialized() ? std::to_string(triangle.calcArea()) : "???"
+
+                );
+            }
+
             idx++;
         }
     }
 
-    static int prompt_int(const char* prompt)
+    template <typename T>
+    static T prompt(const char* prompt)
     {
-        std::print("\n{}", prompt);
+        std::print("{}", prompt);
 
-        int option;
+        T option;
         std::cin >> option;
 
         return option;
     }
 
-    std::optional<int> select_triangle()
+    static void pause()
+    {
+        std::print("Press enter to continue...");
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cin.get();
+    }
+
+    static void clear_screen()
+    {
+        std::print("\033[2J\033[1;1H");
+    }
+
+    std::optional<int> select_triangle(const bool require_initialized = false)
     {
         while (true)
         {
-            const int triangle_idx = prompt_int("Select a triangle (-1 to cancel): ");
+            print_triangles(require_initialized);
+            std::println();
+            std::println("[0] Cancel");
+            std::println();
+            const int triangle_idx = prompt<int>("Select a triangle (0 to cancel): ") - 1;
 
             if (triangle_idx == -1) return std::nullopt;
 
@@ -229,16 +286,22 @@ private:
                 continue;
             }
 
+            if (require_initialized && !m_triangles[triangle_idx].is_initialized())
+            {
+                std::println("Selected triangle is not initialized");
+                continue;
+            }
+
             return triangle_idx;
         }
     }
 
-    void run_edit_menu(Triangle& triangle)
+    static void run_edit_menu(Triangle& triangle)
     {
         while (true)
         {
             std::println("Points: ");
-            for (size_t idx = 0; auto& point : triangle.m_vertex)
+            for (size_t idx = 1; auto& point : triangle.m_vertex)
             {
                 std::println("[{}] {}", idx, point.transform([](const std::unique_ptr<Point>& x)
                 {
@@ -246,25 +309,28 @@ private:
                 }).value_or("nullptr"));
                 idx++;
             }
+            std::println();
+            std::println("[0] Done");
+            std::println();
 
             int point_idx;
             while (true)
             {
-                point_idx = prompt_int("Select a point (-1 to cancel): ");
+                point_idx = prompt<int>("Select a point (0 when done): ") - 1;
                 if (point_idx == -1) return;
                 if (point_idx < 0 || point_idx >= 3)
                 {
-                    std::println("Invalid point number (must be between 0 and 2 inclusively");
+                    std::println("Invalid point number");
                     continue;
                 }
                 break;
             }
 
             auto& point = triangle.m_vertex[point_idx];
-            const auto x = prompt_int("Enter value for x: ");
-            const auto y = prompt_int("Enter value for y: ");
-            const auto z = prompt_int("Enter value for z: ");
-            *point = std::make_unique<Point>(Point(x, y, z));
+            const auto x = prompt<float>("Enter value for x: ");
+            const auto y = prompt<float>("Enter value for y: ");
+            const auto z = prompt<float>("Enter value for z: ");
+            point = std::make_unique<Point>(Point(x, y, z));
         }
     }
 };
