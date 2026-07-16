@@ -25,7 +25,15 @@ public:
     {
     }
 
-    ~Point() = default;
+
+    ~Point()
+    {
+        std::println("Destroyed point");
+    }
+
+    Point(const Point& other) = default;
+
+    Point& operator=(const Point& other) = default;
 
     int translate(const float d, const char axis)
     {
@@ -65,14 +73,14 @@ public:
 class Triangle
 {
 public:
-    std::array<std::optional<std::unique_ptr<Point>>, 3> m_vertex;
+    std::array<std::optional<Point*>, 3> m_vertex;
 
     Triangle(
-        std::unique_ptr<Point> vertex1,
-        std::unique_ptr<Point> vertex2,
-        std::unique_ptr<Point> vertex3
+        Point* vertex1,
+        Point* vertex2,
+        Point* vertex3
     )
-        : m_vertex({std::move(vertex1), std::move(vertex2), std::move(vertex3)})
+        : m_vertex({vertex1, vertex2, vertex3})
     {
     }
 
@@ -81,7 +89,37 @@ public:
     {
     }
 
-    // ~Triangle() = default;
+    ~Triangle()
+    {
+        std::println("Destroyed Triangle");
+        for (auto vertex : m_vertex)
+        {
+            if (!vertex.has_value()) continue;
+            delete vertex.value();
+        }
+    }
+
+    Triangle(const Triangle& other)
+    {
+        m_vertex = {
+            other.m_vertex[0].transform([](const Point* x) { return new Point(*x); }),
+            other.m_vertex[1].transform([](const Point* x) { return new Point(*x); }),
+            other.m_vertex[2].transform([](const Point* x) { return new Point(*x); })
+        };
+    };
+
+    Triangle& operator=(const Triangle& other)
+    {
+        if (this == &other) return *this;
+
+        for (auto vertex : m_vertex)
+        {
+            if (!vertex.has_value()) continue;
+            delete vertex.value();
+        }
+
+        return *this;
+    };
 
 
     int translate(const float d, const char axis)
@@ -112,15 +150,15 @@ public:
     {
         return std::format(
             "Triangle(\n\t{},\n\t{},\n\t{}\n)",
-            m_vertex[0].transform([](const std::unique_ptr<Point>& x)
+            m_vertex[0].transform([](const Point* x)
             {
                 return static_cast<std::string>(*x);
             }).value_or("nullptr"),
-            m_vertex[1].transform([](const std::unique_ptr<Point>& x)
+            m_vertex[1].transform([](const Point* x)
             {
                 return static_cast<std::string>(*x);
             }).value_or("nullptr"),
-            m_vertex[2].transform([](const std::unique_ptr<Point>& x)
+            m_vertex[2].transform([](const Point* x)
             {
                 return static_cast<std::string>(*x);
             }).value_or("nullptr")
@@ -303,7 +341,7 @@ private:
             std::println("Points: ");
             for (size_t idx = 1; auto& point : triangle.m_vertex)
             {
-                std::println("[{}] {}", idx, point.transform([](const std::unique_ptr<Point>& x)
+                std::println("[{}] {}", idx, point.transform([](const Point* x)
                 {
                     return static_cast<std::string>(*x);
                 }).value_or("nullptr"));
@@ -330,7 +368,11 @@ private:
             const auto x = prompt<float>("Enter value for x: ");
             const auto y = prompt<float>("Enter value for y: ");
             const auto z = prompt<float>("Enter value for z: ");
-            point = std::make_unique<Point>(Point(x, y, z));
+
+            if (point.has_value())
+                delete point.value();
+
+            point = new Point(x, y, z);
         }
     }
 };
@@ -339,9 +381,9 @@ private:
 int main()
 {
     auto t = Triangle(
-        std::make_unique<Point>(Point(1, 3, 6)),
-        std::make_unique<Point>(Point(2, 5, 8)),
-        std::make_unique<Point>(Point(4, 7, 9))
+        new Point(1, 3, 6),
+        new Point(2, 5, 8),
+        new Point(4, 7, 9)
     );
     std::println("{}", t.calcArea());
     t.translate(1, 'z');
