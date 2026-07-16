@@ -106,7 +106,7 @@ public:
             other.m_vertex[1].transform([](const Point* x) { return new Point(*x); }),
             other.m_vertex[2].transform([](const Point* x) { return new Point(*x); })
         };
-    };
+    }
 
     Triangle& operator=(const Triangle& other)
     {
@@ -119,7 +119,7 @@ public:
         }
 
         return *this;
-    };
+    }
 
 
     int translate(const float d, const char axis)
