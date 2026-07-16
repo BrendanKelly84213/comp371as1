@@ -4,15 +4,20 @@
 
 
 /**
- *
- * @param len Lenth
- * @return
+ * Creates an empty uninitliazed int array
+ * @param len Length of the array to create
+ * @return The newly created array
  */
 int* createArray(const size_t len)
 {
     return new int[len];
 }
 
+/**
+ * Initializes an int array with an incrementing sequence of numbers
+ * @param arr The array to initialize. Must be non-null
+ * @param len The length of #arr
+ */
 void initializeArray(int arr[], const size_t len)
 {
     assert(arr != nullptr);
@@ -23,6 +28,11 @@ void initializeArray(int arr[], const size_t len)
     }
 }
 
+/**
+ * Prints out the contents of an int array, delimited by spaces
+ * @param arr The array to print out. Must be non-null
+ * @param len The length #arr
+ */
 void printArray(const int arr[], const size_t len)
 {
     assert(arr != nullptr);
@@ -35,6 +45,10 @@ void printArray(const int arr[], const size_t len)
     std::println();
 }
 
+/**
+ * Deletes an array created using @link createArray
+ * @param arr The array to delete
+ */
 void deleteArray(const int arr[])
 {
     delete[] arr;

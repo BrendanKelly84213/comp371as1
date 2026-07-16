@@ -8,28 +8,48 @@
 class Point final
 {
 public:
+    //It does not violate encapsulation to keep these members public as theres no other internal state depending on these values.
+    /**
+     * X coordinate
+     */
     float m_x;
+    /**
+     * Y coordinate
+     */
     float m_y;
+    /**
+     * Z coordinate
+     */
     float m_z;
 
-    Point() : m_x(0), m_y(0), m_z(0)
-    {
-    }
 
+    /**
+     * Point constructor
+     * @param x The x coordinate
+     * @param y The y coordinate
+     * @param z The z coordinate
+     */
     Point(const float x, const float y, const float z) : m_x(x), m_y(y), m_z(z)
     {
     }
 
-
     ~Point()
     {
+        // The Point class doesn't have any heap allocated resources, so there's nothing to do here.
         std::println("Destroyed point");
     }
 
+    // All fields are trivially copyable so we can use the default copy constructor and copy assignment operator implementation
     Point(const Point& other) = default;
 
     Point& operator=(const Point& other) = default;
 
+    /**
+     * Translate the point by #d units alongside the #axis direction
+     * @param d Distance to translate by
+     * @param axis Direction (x, y, or z) to translate in
+     * @return 0 if successful, -1 if an error occurred
+     */
     int translate(const float d, const char axis)
     {
         switch (axis)
@@ -48,16 +68,24 @@ public:
         }
     }
 
+    /**
+     * Computer the distance to another point
+     * @param other Point to compare to
+     * @return The distance in units from #this to #other
+     */
     [[nodiscard]] float distance_to(const Point& other) const
     {
         return std::hypot(
-            m_x - other.m_x,
-            m_y - other.m_y,
-            m_z - other.m_z
+            other.m_x - m_x,
+            other.m_y - m_y,
+            other.m_z - m_z
         );
     }
 
 
+    /**
+     * Explicit cast to string for display purposes
+     */
     [[nodiscard]] explicit operator std::string() const
     {
         return std::format("Point({}, {}, {})", m_x, m_y, m_z);
@@ -68,7 +96,10 @@ public:
 class Triangle
 {
 public:
-    std::array<Point*, 3> m_vertex{nullptr, nullptr, nullptr};
+    /**
+     * Array of length 3 containing the vertices of this triangle
+     */
+    std::array<Point*, 3> m_vertex;
 
     Triangle(
         Point* vertex1,
@@ -79,31 +110,39 @@ public:
     {
     }
 
+    // The default constructor will set all vertices to nullptr
     Triangle() = default;
 
     ~Triangle()
     {
         std::println("Destroyed Triangle");
+        // Delete all owned data
         for (const auto vertex : m_vertex)
             delete vertex;
     }
 
-    Triangle(const Triangle& other)
+    // Copy constructor, needed to be a valid vector element without breaking memory safety
+    // We just copy every heap allocated point and save it in the new instance
+    Triangle(const Triangle& other) : m_vertex({
+        other.m_vertex[0] == nullptr ? nullptr : new Point(*other.m_vertex[0]),
+        other.m_vertex[1] == nullptr ? nullptr : new Point(*other.m_vertex[1]),
+        other.m_vertex[2] == nullptr ? nullptr : new Point(*other.m_vertex[2])
+    })
     {
-        m_vertex = {
-            other.m_vertex[0] == nullptr ? nullptr : new Point(*other.m_vertex[0]),
-            other.m_vertex[1] == nullptr ? nullptr : new Point(*other.m_vertex[1]),
-            other.m_vertex[2] == nullptr ? nullptr : new Point(*other.m_vertex[2]),
-        };
     }
 
+    // Copy assignment operator, also needed to be a valid vector element. Replaces an existing instance with the contents
+    // of another
     Triangle& operator=(const Triangle& other)
     {
+        // Self assignment guard
         if (this == &other) return *this;
 
+        // Delete old data
         for (const auto vertex : m_vertex)
             delete vertex;
 
+        // Copy new data
         m_vertex = {
             other.m_vertex[0] == nullptr ? nullptr : new Point(*other.m_vertex[0]),
             other.m_vertex[1] == nullptr ? nullptr : new Point(*other.m_vertex[1]),
@@ -114,6 +153,12 @@ public:
     }
 
 
+    /**
+     * Translate all vertices by #d units alongside the #axis direction
+     * @param d Distance to translate by
+     * @param axis Direction (x, y, or z) to translate in
+     * @return 0 if all translations were successful, -1 if an error occurred
+     */
     int translate(const float d, const char axis)
     {
         ensure_initialized();
@@ -125,6 +170,10 @@ public:
         return res;
     }
 
+    /**
+     * Computes the area of the triangle. The triangle should be initialized before calling this method.
+     * @return The computed area of the triangle
+     */
     [[nodiscard]] float calcArea() const
     {
         ensure_initialized();
@@ -138,6 +187,10 @@ public:
         return std::sqrt(s * (s - a) * (s - b) * (s - c));
     }
 
+
+    /**
+     * Explicit cast to string for display purposes
+     */
     [[nodiscard]] explicit operator std::string() const
     {
         return std::format(
@@ -148,11 +201,18 @@ public:
         );
     }
 
+    /**
+     * Helper function to check if all pointers have been set
+     * @return Whether the triangle is fully initialized or not
+     */
     [[nodiscard]] bool is_initialized() const
     {
         return m_vertex[0] != nullptr && m_vertex[1] != nullptr && m_vertex[2] != nullptr;
     }
 
+    /**
+     * Helper function that throws if any of the vertices are null
+     */
     void ensure_initialized() const
     {
         if (!is_initialized()) throw std::runtime_error("Attempted to use uninitialized Triangle instance");
@@ -193,29 +253,36 @@ public:
                 break;
             case 2:
                 {
+                    // Pick triangle
                     const auto triangle_idx = select_triangle();
                     if (triangle_idx == -1) break;
 
+                    // Branch to submenu
                     run_edit_menu(m_triangles[triangle_idx]);
                     break;
                 }
             case 3:
                 {
+                    // Pick triangle
                     const auto triangle_idx = select_triangle();
                     if (triangle_idx == -1) break;
 
+                    // Delete that triangle
                     m_triangles.erase(m_triangles.begin() + triangle_idx);
                     break;
                 }
             case 4:
                 {
+                    // Pick triangle
                     const auto triangle_idx = select_triangle(true);
                     if (triangle_idx == -1) break;
 
+                    // Pick direction
                     char direction;
                     while (true)
                     {
                         direction = prompt<char>("Enter direction to translate in (x, y, or z): ");
+ // Validate the direction and try again if not valid
                         direction = static_cast<char>(tolower(direction));
                         if (direction != 'x' && direction != 'y' && direction != 'z')
                         {
@@ -226,17 +293,27 @@ public:
                         break;
                     }
 
+                    // Pick distance
                     const auto d = prompt<float>("Enter value to translate by: ");
 
-                    m_triangles[triangle_idx].translate(d, direction);
+                    // Do the actual translation
+                    const auto result = m_triangles[triangle_idx].translate(d, direction);
+                    // This should never happen as we validate the direction before, but we it does we should still log it.
+                    if (result == -1)
+                    {
+                        std::println("Error while translating triangle");
+                        pause();
+                    }
 
                     break;
                 }
             case 5:
+                // A bit of a useless command, but the assignment asks for it explicitely, so here it is
                 print_triangles();
                 pause();
                 break;
             default:
+                // Bad option, just try again
                 std::println("Invalid Option ({})!", option);
                 pause();
             }
@@ -244,8 +321,15 @@ public:
     }
 
 private:
+    /**
+     * List of triangles currently managed by the driver class instance
+     */
     std::vector<Triangle> m_triangles;
 
+    /**
+     * Prints a numbered one-indexed list of triangles with their values
+     * @param only_initialized If only initialized triangles should be printed
+     */
     void print_triangles(const bool only_initialized = false)
     {
         std::println("Triangles:");
@@ -265,6 +349,12 @@ private:
         }
     }
 
+    /**
+     * Helper function that prompts the user to type in a value then reads in the value
+     * @tparam T Type of the value to read
+     * @param prompt Message to prompt the user with. Should ideally end with ": "
+     * @return The value inputted by the user
+     */
     template <typename T>
     static T prompt(const char* prompt)
     {
@@ -276,6 +366,9 @@ private:
         return option;
     }
 
+    /**
+     * Prompts the user to press enter then pauses until they do so
+     */
     static void pause()
     {
         std::print("Press enter to continue...");
@@ -284,11 +377,19 @@ private:
         std::cin.get();
     }
 
+    /**
+     * Clears the screen. Depends on platform support for ANSI escape codes
+     */
     static void clear_screen()
     {
         std::print("\033[2J\033[1;1H");
     }
 
+    /**
+     * Makes the user pick a triangle to proceed
+     * @param require_initialized If only initialized triangles should be considered for selection
+     * @return The 0 indexed index of the triangle, or -1 if the user canceled
+     */
     int select_triangle(const bool require_initialized = false)
     {
         while (true)
@@ -298,15 +399,19 @@ private:
             std::println("[0] Cancel");
             std::println();
             const int triangle_idx = prompt<int>("Select a triangle (0 to cancel): ") - 1;
+            // we do minus one as 0 is our "quit"
 
+            // User canceled
             if (triangle_idx == -1) return -1;
 
+            // Index out of range
             if (triangle_idx < 0 || triangle_idx >= m_triangles.size())
             {
                 std::println("Invalid triangle index");
                 continue;
             }
 
+            // Check for init status if required by param
             if (require_initialized && !m_triangles[triangle_idx].is_initialized())
             {
                 std::println("Selected triangle is not initialized");
@@ -317,10 +422,15 @@ private:
         }
     }
 
+    /**
+     * Edits a specific triangle's vertices
+     * @param triangle Triangle to edit
+     */
     static void run_edit_menu(Triangle& triangle)
     {
         while (true)
         {
+            // First print all points
             std::println("Points: ");
             for (size_t idx = 1; const auto& point : triangle.m_vertex)
             {
@@ -335,11 +445,14 @@ private:
             std::println("[0] Done");
             std::println();
 
+            // Make the user pick one
             int point_idx;
             while (true)
             {
                 point_idx = prompt<int>("Select a point (0 when done): ") - 1;
+                // They're done, let's return
                 if (point_idx == -1) return;
+                // Index out of range
                 if (point_idx < 0 || point_idx >= 3)
                 {
                     std::println("Invalid point number");
@@ -348,6 +461,7 @@ private:
                 break;
             }
 
+            // Pick coordinate values. this step can't be canceled for sanity reasons
             auto& point = triangle.m_vertex[point_idx];
             const auto x = prompt<float>("Enter value for x: ");
             const auto y = prompt<float>("Enter value for y: ");
@@ -362,18 +476,7 @@ private:
 
 int main()
 {
-    auto t = Triangle(
-        new Point(1, 3, 6),
-        new Point(2, 5, 8),
-        new Point(4, 7, 9)
-    );
-    std::println("{}", t.calcArea());
-    t.translate(1, 'z');
-    std::println("{}", static_cast<std::string>(t));
-    std::println("{}", t.calcArea());
-
-    Driver driver;
-    driver.run_main_menu();
+    Driver().run_main_menu();
 
     return 0;
 }
