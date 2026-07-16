@@ -5,11 +5,6 @@
 #include <memory>
 #include <vector>
 
-// TODO: Ask if we can use smart pointers and std optional
-// TODO: Clarify whats up with destructors
-// TODO: Clarify why translate takes an int not a float
-// TODO: Clarity whats the point of nullability for points
-
 class Point final
 {
 public:
@@ -73,7 +68,7 @@ public:
 class Triangle
 {
 public:
-    std::array<std::optional<Point*>, 3> m_vertex;
+    std::array<Point*, 3> m_vertex{nullptr, nullptr, nullptr};
 
     Triangle(
         Point* vertex1,
@@ -84,27 +79,21 @@ public:
     {
     }
 
-    Triangle()
-        : m_vertex({std::nullopt, std::nullopt, std::nullopt})
-    {
-    }
+    Triangle() = default;
 
     ~Triangle()
     {
         std::println("Destroyed Triangle");
-        for (auto vertex : m_vertex)
-        {
-            if (!vertex.has_value()) continue;
-            delete vertex.value();
-        }
+        for (const auto vertex : m_vertex)
+            delete vertex;
     }
 
     Triangle(const Triangle& other)
     {
         m_vertex = {
-            other.m_vertex[0].transform([](const Point* x) { return new Point(*x); }),
-            other.m_vertex[1].transform([](const Point* x) { return new Point(*x); }),
-            other.m_vertex[2].transform([](const Point* x) { return new Point(*x); })
+            other.m_vertex[0] == nullptr ? nullptr : new Point(*other.m_vertex[0]),
+            other.m_vertex[1] == nullptr ? nullptr : new Point(*other.m_vertex[1]),
+            other.m_vertex[2] == nullptr ? nullptr : new Point(*other.m_vertex[2]),
         };
     }
 
@@ -112,11 +101,14 @@ public:
     {
         if (this == &other) return *this;
 
-        for (auto vertex : m_vertex)
-        {
-            if (!vertex.has_value()) continue;
-            delete vertex.value();
-        }
+        for (const auto vertex : m_vertex)
+            delete vertex;
+
+        m_vertex = {
+            other.m_vertex[0] == nullptr ? nullptr : new Point(*other.m_vertex[0]),
+            other.m_vertex[1] == nullptr ? nullptr : new Point(*other.m_vertex[1]),
+            other.m_vertex[2] == nullptr ? nullptr : new Point(*other.m_vertex[2]),
+        };
 
         return *this;
     }
@@ -127,9 +119,9 @@ public:
         ensure_initialized();
 
         int res = 0;
-        res |= m_vertex[0].value()->translate(d, axis);
-        res |= m_vertex[1].value()->translate(d, axis);
-        res |= m_vertex[2].value()->translate(d, axis);
+        res |= m_vertex[0]->translate(d, axis);
+        res |= m_vertex[1]->translate(d, axis);
+        res |= m_vertex[2]->translate(d, axis);
         return res;
     }
 
@@ -137,9 +129,9 @@ public:
     {
         ensure_initialized();
 
-        const float a = m_vertex[0].value()->distance_to(*m_vertex[1].value());
-        const float b = m_vertex[0].value()->distance_to(*m_vertex[2].value());
-        const float c = m_vertex[1].value()->distance_to(*m_vertex[2].value());
+        const float a = m_vertex[0]->distance_to(*m_vertex[1]);
+        const float b = m_vertex[0]->distance_to(*m_vertex[2]);
+        const float c = m_vertex[1]->distance_to(*m_vertex[2]);
         const float s = (a + b + c) * 0.5f;
 
         // heron's formula
@@ -150,24 +142,15 @@ public:
     {
         return std::format(
             "Triangle(\n\t{},\n\t{},\n\t{}\n)",
-            m_vertex[0].transform([](const Point* x)
-            {
-                return static_cast<std::string>(*x);
-            }).value_or("nullptr"),
-            m_vertex[1].transform([](const Point* x)
-            {
-                return static_cast<std::string>(*x);
-            }).value_or("nullptr"),
-            m_vertex[2].transform([](const Point* x)
-            {
-                return static_cast<std::string>(*x);
-            }).value_or("nullptr")
+            m_vertex[0] == nullptr ? "nullptr" : static_cast<std::string>(*m_vertex[0]),
+            m_vertex[1] == nullptr ? "nullptr" : static_cast<std::string>(*m_vertex[1]),
+            m_vertex[2] == nullptr ? "nullptr" : static_cast<std::string>(*m_vertex[2])
         );
     }
 
     [[nodiscard]] bool is_initialized() const
     {
-        return m_vertex[0].has_value() && m_vertex[1].has_value() && m_vertex[2].has_value();
+        return m_vertex[0] != nullptr && m_vertex[1] != nullptr && m_vertex[2] != nullptr;
     }
 
     void ensure_initialized() const
@@ -211,23 +194,23 @@ public:
             case 2:
                 {
                     const auto triangle_idx = select_triangle();
-                    if (!triangle_idx.has_value()) break;
+                    if (triangle_idx == -1) break;
 
-                    run_edit_menu(m_triangles[triangle_idx.value()]);
+                    run_edit_menu(m_triangles[triangle_idx]);
                     break;
                 }
             case 3:
                 {
                     const auto triangle_idx = select_triangle();
-                    if (!triangle_idx.has_value()) break;
+                    if (triangle_idx == -1) break;
 
-                    m_triangles.erase(m_triangles.begin() + triangle_idx.value());
+                    m_triangles.erase(m_triangles.begin() + triangle_idx);
                     break;
                 }
             case 4:
                 {
                     const auto triangle_idx = select_triangle(true);
-                    if (!triangle_idx.has_value()) break;
+                    if (triangle_idx == -1) break;
 
                     char direction;
                     while (true)
@@ -245,7 +228,7 @@ public:
 
                     const auto d = prompt<float>("Enter value to translate by: ");
 
-                    m_triangles[triangle_idx.value()].translate(d, direction);
+                    m_triangles[triangle_idx].translate(d, direction);
 
                     break;
                 }
@@ -306,7 +289,7 @@ private:
         std::print("\033[2J\033[1;1H");
     }
 
-    std::optional<int> select_triangle(const bool require_initialized = false)
+    int select_triangle(const bool require_initialized = false)
     {
         while (true)
         {
@@ -316,7 +299,7 @@ private:
             std::println();
             const int triangle_idx = prompt<int>("Select a triangle (0 to cancel): ") - 1;
 
-            if (triangle_idx == -1) return std::nullopt;
+            if (triangle_idx == -1) return -1;
 
             if (triangle_idx < 0 || triangle_idx >= m_triangles.size())
             {
@@ -339,12 +322,13 @@ private:
         while (true)
         {
             std::println("Points: ");
-            for (size_t idx = 1; auto& point : triangle.m_vertex)
+            for (size_t idx = 1; const auto& point : triangle.m_vertex)
             {
-                std::println("[{}] {}", idx, point.transform([](const Point* x)
-                {
-                    return static_cast<std::string>(*x);
-                }).value_or("nullptr"));
+                std::println(
+                    "[{}] {}",
+                    idx,
+                    point == nullptr ? "nullptr" : static_cast<std::string>(*point)
+                );
                 idx++;
             }
             std::println();
@@ -369,9 +353,7 @@ private:
             const auto y = prompt<float>("Enter value for y: ");
             const auto z = prompt<float>("Enter value for z: ");
 
-            if (point.has_value())
-                delete point.value();
-
+            delete point;
             point = new Point(x, y, z);
         }
     }
