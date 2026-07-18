@@ -8,7 +8,7 @@
 class Point final
 {
 public:
-    //It does not violate encapsulation to keep these members public as theres no other internal state depending on these values.
+    //It does not violate encapsulation to keep these members public as there's no other internal state depending on these values.
     /**
      * X coordinate
      */
@@ -39,7 +39,7 @@ public:
         std::println("Destroyed point");
     }
 
-    // All fields are trivially copyable so we can use the default copy constructor and copy assignment operator implementation
+    // All fields are trivially copyable, so we can use the default copy constructor and copy assignment operator implementation
     Point(const Point& other) = default;
 
     Point& operator=(const Point& other) = default;
@@ -122,7 +122,7 @@ public:
     }
 
     // Copy constructor, needed to be a valid vector element without breaking memory safety
-    // We just copy every heap allocated point and save it in the new instance
+    // We just copy every heap-allocated point and save it in the new instance
     Triangle(const Triangle& other) : m_vertex({
         other.m_vertex[0] == nullptr ? nullptr : new Point(*other.m_vertex[0]),
         other.m_vertex[1] == nullptr ? nullptr : new Point(*other.m_vertex[1]),
@@ -131,11 +131,11 @@ public:
     {
     }
 
-    // Copy assignment operator, also needed to be a valid vector element. Replaces an existing instance with the contents
+    // Copy assignment operator; Also needed to be a valid vector element. Replaces an existing instance with the contents
     // of another
     Triangle& operator=(const Triangle& other)
     {
-        // Self assignment guard
+        // Self-assignment guard
         if (this == &other) return *this;
 
         // Delete old data
@@ -226,6 +226,16 @@ public:
     {
         while (true)
         {
+            enum class MenuOption : int
+            {
+                Quit = 0,
+                Create = 1,
+                Edit = 2,
+                Delete = 3,
+                Translate = 4,
+                Display = 5
+            };
+
             clear_screen();
             std::println("Triangle Manipulation Menu");
             std::println();
@@ -244,14 +254,15 @@ public:
 
             clear_screen();
 
-            switch (option)
+            switch (static_cast<MenuOption>(option))
             {
-            case 0:
+                using enum MenuOption;
+            case Quit:
                 return;
-            case 1:
+            case Create:
                 m_triangles.emplace_back();
                 break;
-            case 2:
+            case Edit:
                 {
                     // Pick triangle
                     const auto triangle_idx = select_triangle();
@@ -261,7 +272,7 @@ public:
                     run_edit_menu(m_triangles[triangle_idx]);
                     break;
                 }
-            case 3:
+            case Delete:
                 {
                     // Pick triangle
                     const auto triangle_idx = select_triangle();
@@ -271,7 +282,7 @@ public:
                     m_triangles.erase(m_triangles.begin() + triangle_idx);
                     break;
                 }
-            case 4:
+            case Translate:
                 {
                     // Pick triangle
                     const auto triangle_idx = select_triangle(true);
@@ -282,7 +293,7 @@ public:
                     while (true)
                     {
                         direction = prompt<char>("Enter direction to translate in (x, y, or z): ");
- // Validate the direction and try again if not valid
+                        // Validate the direction and try again if not valid
                         direction = static_cast<char>(tolower(direction));
                         if (direction != 'x' && direction != 'y' && direction != 'z')
                         {
@@ -296,10 +307,8 @@ public:
                     // Pick distance
                     const auto d = prompt<float>("Enter value to translate by: ");
 
-                    // Do the actual translation
-                    const auto result = m_triangles[triangle_idx].translate(d, direction);
-                    // This should never happen as we validate the direction before, but we it does we should still log it.
-                    if (result == -1)
+                    // This should never happen as we validate the direction before, but if it does, we should still log it.
+                    if (m_triangles[triangle_idx].translate(d, direction) == -1)
                     {
                         std::println("Error while translating triangle");
                         pause();
@@ -307,8 +316,8 @@ public:
 
                     break;
                 }
-            case 5:
-                // A bit of a useless command, but the assignment asks for it explicitely, so here it is
+            case Display:
+                // A bit of a useless command, but the assignment asks for it explicitly, so here it is
                 print_triangles();
                 pause();
                 break;
@@ -398,8 +407,8 @@ private:
             std::println();
             std::println("[0] Cancel");
             std::println();
-            const int triangle_idx = prompt<int>("Select a triangle (0 to cancel): ") - 1;
             // we do minus one as 0 is our "quit"
+            const int triangle_idx = prompt<int>("Select a triangle (0 to cancel): ") - 1;
 
             // User canceled
             if (triangle_idx == -1) return -1;
@@ -430,7 +439,7 @@ private:
     {
         while (true)
         {
-            // First print all points
+            // First, print all points
             std::println("Points: ");
             for (size_t idx = 1; const auto& point : triangle.m_vertex)
             {

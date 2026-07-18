@@ -4,7 +4,7 @@
 
 
 /**
- * Creates an empty uninitliazed int array
+ * Creates an empty uninitialized int array
  * @param len Length of the array to create
  * @return The newly created array
  */
@@ -22,7 +22,7 @@ void initializeArray(int arr[], const size_t len)
 {
     assert(arr != nullptr);
 
-    for (size_t i = 0; i < len; ++i)
+    for (auto i = 0; i < len; ++i)
     {
         arr[i] = i;
     }
@@ -46,7 +46,7 @@ void printArray(const int arr[], const size_t len)
 }
 
 /**
- * Deletes an array created using @link createArray
+ * Deletes an array created using createArray
  * @param arr The array to delete
  */
 void deleteArray(const int arr[])
