@@ -4,6 +4,9 @@
 #include <cmath>
 #include <memory>
 #include <vector>
+#include <cctype>
+#include <array>
+#include <limits>
 
 class Point final
 {
