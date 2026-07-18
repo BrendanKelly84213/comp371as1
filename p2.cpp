@@ -367,12 +367,18 @@ private:
     template <typename T>
     static T prompt(const char* prompt)
     {
-        std::print("{}", prompt);
+        while (true)
+        {
+            std::print("{}", prompt);
 
-        T option;
-        std::cin >> option;
+            T option;
+            if (std::cin >> option)
+                return option;
 
-        return option;
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::println("Invalid input");
+        }
     }
 
     /**
